@@ -48,14 +48,18 @@ connection.connect((err) => {
                         socket.emit('SERVER_SEND_DANG_NHAP_THAT_BAI', 'DANG_NHAP_THAT_BAI');
                     } else {
                         const { name } = arr[0];
-                        // Nếu đăng nhập thành công. Update 'is_sign_in = 1'.                        
+                        // Gán email và name vào cho socket
+                        socket.email = email;
+                        socket.name = name;
+
+                        // Nếu đăng nhập thành công. Update 'is_sign_in = 1'.                     
                         const queryUpdate = `UPDATE USERS SET is_sign_in = 1 WHERE email = '${email}'`;
                         connection.query(queryUpdate, (err, result, fields) => {
                             if (err) {
                                 console.log(err.message);
                                 return;
                             }
-                            console.log('THANH_CONG');
+                            console.log('UPDATE THANH_CONG');
                         });
 
                         // Lấy tất cả các user có 'is_sign_in = 1, gửi cho user vừa đăng nhập, kèm theo name và email'.
@@ -75,11 +79,20 @@ connection.connect((err) => {
                 }
             });
         });
-    });
-
-    io.on('disconnect', () => {
-        // Update is_sign_in của user về 0.
-        // Gửi name và email cho tất cả các user còn lại.
+        socket.on('disconnect', () => {
+            // Update is_sign_in của user về 0.
+            const { name, email } = socket;
+            const query = `UPDATE USERS SET is_sign_in = 0 WHERE email = '${email}'`;
+            connection.query(query, (err, result, fields) => {
+                if (err) {
+                    console.log(err.message);
+                    return;
+                }
+                console.log('UPDATE SIGN OUT');
+            });
+            // Gửi name và email cho tất cả các user còn lại.
+            socket.broadcast.emit('SERVER_SEND_USER_DANG_XUAT', { name, email });
+        });
     });
 });
 
