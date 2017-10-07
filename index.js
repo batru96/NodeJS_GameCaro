@@ -6,7 +6,22 @@ const mysql = require('mysql');
 const md5 = require('md5');
 server.listen(3000, () => console.log('server is running'));
 
-app.get('/', (req, res) => console.log('Fun'));
+function disconnect(name, email, socket, connection) {
+    // Update is_sign_in của user về 0.
+    socket.name = undefined;
+    socket.email = undefined;  
+    const query = `UPDATE USERS SET is_sign_in = 0 WHERE email = '${email}'`;
+    connection.query(query, (err, result, fields) => {
+        if (err) {
+            console.log(err.message);
+            return;
+        }
+        console.log('UPDATE SIGN OUT');
+    });
+    // Gửi name và email cho tất cả các user còn lại.
+    socket.broadcast.emit('SERVER_SEND_USER_DANG_XUAT', { name, email });
+}
+
 const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
@@ -79,20 +94,15 @@ connection.connect((err) => {
                 }
             });
         });
+
+        socket.on('USER_DANG_XUAT', (info) => {
+            const { name, email } = info;
+            disconnect(name, email, socket, connection);
+        });
+
         socket.on('disconnect', () => {
-            // Update is_sign_in của user về 0.
             const { name, email } = socket;
-            const query = `UPDATE USERS SET is_sign_in = 0 WHERE email = '${email}'`;
-            connection.query(query, (err, result, fields) => {
-                if (err) {
-                    console.log(err.message);
-                    return;
-                }
-                console.log('UPDATE SIGN OUT');
-            });
-            // Gửi name và email cho tất cả các user còn lại.
-            socket.broadcast.emit('SERVER_SEND_USER_DANG_XUAT', { name, email });
+            disconnect(name, email, socket, connection);
         });
     });
 });
-
