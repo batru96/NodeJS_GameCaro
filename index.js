@@ -1,13 +1,19 @@
 const express = require('express');
 const app = express();
+app.use(express.static('./public'));
+app.set('view engine', 'ejs');
+app.set('views', './views');
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
 const mysql = require('mysql');
 const md5 = require('md5');
 server.listen(3000, () => console.log('server is running'));
 
-function disconnect(name, email, socket, connection) {
+app.get('/', (req, res) => res.render('trangchu'));
+
+function disconnect(socket, connection) {
     // Update is_sign_in của user về 0.
+    const { email, name } = socket;
     const query = `UPDATE USERS SET is_sign_in = 0 WHERE email = '${email}'`;
     connection.query(query, (err, result, fields) => {
         if (err) {
@@ -91,18 +97,17 @@ connection.connect((err) => {
             });
         });
 
-        socket.on('USER_DANG_XUAT', (info) => {
-            const { name, email } = info;
+        socket.on('USER_DANG_XUAT', () => {
+            const { name, email } = socket;
+            disconnect(socket, connection);
             socket.name = undefined;
             socket.email = undefined;
-            disconnect(name, email, socket, connection);
         });
 
         socket.on('disconnect', () => {
             const { name, email } = socket;
-            if (name === undefined && email === undefined)
-                return;
-            disconnect(name, email, socket, connection);
+            if (name !== undefined && email !== undefined)
+                disconnect(socket, connection);
         });
     });
 });
