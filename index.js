@@ -8,15 +8,12 @@ server.listen(3000, () => console.log('server is running'));
 
 function disconnect(name, email, socket, connection) {
     // Update is_sign_in của user về 0.
-    socket.name = undefined;
-    socket.email = undefined;  
     const query = `UPDATE USERS SET is_sign_in = 0 WHERE email = '${email}'`;
     connection.query(query, (err, result, fields) => {
         if (err) {
             console.log(err.message);
             return;
         }
-        console.log('UPDATE SIGN OUT');
     });
     // Gửi name và email cho tất cả các user còn lại.
     socket.broadcast.emit('SERVER_SEND_USER_DANG_XUAT', { name, email });
@@ -74,7 +71,6 @@ connection.connect((err) => {
                                 console.log(err.message);
                                 return;
                             }
-                            console.log('UPDATE THANH_CONG');
                         });
 
                         // Lấy tất cả các user có 'is_sign_in = 1, gửi cho user vừa đăng nhập, kèm theo name và email'.
@@ -97,11 +93,15 @@ connection.connect((err) => {
 
         socket.on('USER_DANG_XUAT', (info) => {
             const { name, email } = info;
+            socket.name = undefined;
+            socket.email = undefined;
             disconnect(name, email, socket, connection);
         });
 
         socket.on('disconnect', () => {
             const { name, email } = socket;
+            if (name === undefined && email === undefined)
+                return;
             disconnect(name, email, socket, connection);
         });
     });
