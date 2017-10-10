@@ -1,0 +1,23 @@
+.khung {
+    background: gray;
+    padding: 10px;
+    margin: 10px;
+}
+
+#trangchinh {
+}
+
+#left {
+    border: 1px solid yellow;
+    width: 20%;
+    float: left;
+}
+
+#right {
+    float: left;
+    width: 79%;
+    border: 1px solid red
+}
+
+
+

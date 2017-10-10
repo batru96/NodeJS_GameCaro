@@ -9,11 +9,11 @@ const mysql = require('mysql');
 const md5 = require('md5');
 server.listen(3000, () => console.log('server is running'));
 
-app.get('/', (req, res) => res.render('trangchu'));
-
 function disconnect(socket, connection) {
-    // Update is_sign_in của user về 0.
+    console.log('Disconnect: ' + socket.id);
     const { email, name } = socket;
+
+    // Update is_sign_in của user về 0.
     const query = `UPDATE USERS SET is_sign_in = 0 WHERE email = '${email}'`;
     connection.query(query, (err, result, fields) => {
         if (err) {
@@ -23,8 +23,14 @@ function disconnect(socket, connection) {
     });
     // Gửi name và email cho tất cả các user còn lại.
     socket.broadcast.emit('SERVER_SEND_USER_DANG_XUAT', { name, email });
+
+    //Remove email va socket.id ra khoi danh sach dsRoom.
+    return dsRoom.filter(e => e.email !== email);
 }
 
+app.get('/', (req, res) => res.render('trangchu'));
+
+let dsRoom = [];
 const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
@@ -54,6 +60,7 @@ connection.connect((err) => {
                 socket.emit('SERVER_SEND_DANG_KY', ketqua);
             });
         });
+
         socket.on('USER_DANG_NHAP', info => {
             const { email, password } = info;
             const query = `SELECT * FROM USERS WHERE email = '${email}' AND password = '${md5(password)}' AND is_sign_in = 0`;
@@ -70,7 +77,7 @@ connection.connect((err) => {
                         socket.email = email;
                         socket.name = name;
 
-                        // Nếu đăng nhập thành công. Update 'is_sign_in = 1'.                     
+                        // Nếu đăng nhập thành công. Update 'is_sign_in = 1'.
                         const queryUpdate = `UPDATE USERS SET is_sign_in = 1 WHERE email = '${email}'`;
                         connection.query(queryUpdate, (err, result, fields) => {
                             if (err) {
@@ -86,6 +93,7 @@ connection.connect((err) => {
                                 console.log(err);
                                 return;
                             }
+                            dsRoom.push({ id: socket.id, email });
                             users = JSON.parse(JSON.stringify(result));
                             socket.emit('SERVER_SEND_DANG_NHAP_THANH_CONG', { email, name, users });
                         });
@@ -97,17 +105,31 @@ connection.connect((err) => {
             });
         });
 
+        socket.on('USER_SEND_THACH_DAU', email => {
+            const obj = dsRoom.find(e => e.email === email);
+            socket.broadcast.in(obj.id).emit('SERVER_SEND_THACH_DAU', socket.id);
+        });
+
+        socket.on('USER_REPLY_THACH_DAU', data => {
+          console.log(data);
+          const {id, value} = data;
+          console.log(id + ' --- ' + value);
+          socket.broadcast.in(id).emit('SERVER_SEND_REPLY_THACH_DAU', value);
+        });
+
+
         socket.on('USER_DANG_XUAT', () => {
             const { name, email } = socket;
-            disconnect(socket, connection);
+            dsRoom = disconnect(socket, connection);
             socket.name = undefined;
             socket.email = undefined;
         });
 
+
         socket.on('disconnect', () => {
             const { name, email } = socket;
             if (name !== undefined && email !== undefined)
-                disconnect(socket, connection);
+                dsRoom = disconnect(socket, connection);
         });
     });
 });

@@ -1,10 +1,15 @@
 $(document).ready(() => {
     let userEmail, userName = undefined;
     const socket = io('http://localhost:3000');
+    $('#khungDangKy').hide();
+    $('#trangchinh').hide();
 
     socket.on('SERVER_SEND_DANG_KY', data => alert(data));
     socket.on('SERVER_SEND_DANG_NHAP_THAT_BAI', data => alert(data));
-    socket.on('SERVER_SEND_DANG_NHAP_THANH_CONG', data => console.log(data));
+    socket.on('SERVER_SEND_DANG_NHAP_THANH_CONG', data => {
+        $('#khungDangNhap').hide(500);
+        $('#trangchinh').show(1000);
+    });
     socket.on('SERVER_SEND_USER_INFO', data => console.log(data));
     socket.on('SERVER_SEND_USER_DANG_XUAT', data => console.log(data));
 
@@ -23,13 +28,23 @@ $(document).ready(() => {
     });
 
     $('#btnDangKy').click(() => {
-        const email = $('#edtEmail').val();
-        const password = $('#edtPassword').val();
-        const name = $('#edtName').val();
+        const email = $('#edtDangKyEmail').val();
+        const password = $('#edtDangKyPassword').val();
+        const name = $('#edtDangKyName').val();
         if (email !== '' && name !== '' && password !== '')
             socket.emit('USER_DANG_KY', { email, name, password })
         else {
             alert('Vui long nhap thong tin day du');
         }
+    });
+
+    $('#btnGoDangKy').click(() => {
+        $('#khungDangNhap').hide(1000);
+        $('#khungDangKy').show(1000);
+    });
+
+    $('#btnGoDangNhap').click(() => {
+        $('#khungDangKy').hide(1000);
+        $('#khungDangNhap').show(1000);
     });
 });
